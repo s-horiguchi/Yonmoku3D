@@ -2,6 +2,10 @@
 #-*- coding:utf-8 -*-
 
 from array import array
+import socket
+
+HOST = "127.0.0.1"
+PORT = 46977
 
 # 0120(3)
 #[[[], [], [], []],
@@ -49,6 +53,9 @@ def has0_and_same(l):
 class Board(object):
     def __init__(self):
         self.board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+        self.s = None
+        self.conn = None
+        self.addr = None
 
     def put(self, x,y,color):
         s = int_to_base3(self.board[y][x])
@@ -216,7 +223,7 @@ class Board(object):
             yield (color, [(3,0,0), (2,1,1), (1,2,2), (0,3,3)][pos])
 
     def show(self):
-        print """ BOARD:
+        self.output(""" BOARD:
           %c    %c    %c    %c
           %c    %c    %c    %c
           %c    %c    %c    %c
@@ -236,32 +243,75 @@ class Board(object):
           %c    %c    %c    %c
           %c    %c    %c    %c
           %c    %c    %c    %c
-        """ % tuple([["|","B","W"][self.get(x,y,z)] for y in xrange(4) for z in xrange(4) for x in xrange(4)])
+        """ % tuple([["|","B","W"][self.get(x,y,z)] for y in xrange(4) for z in xrange(4) for x in xrange(4)]))
+        return
+
+    def output(self, mes, rt=True):
+        print mes
+        if self.s and self.conn:
+            if rt:
+                self.conn.send(mes+"\n")
+            else:
+                self.conn.send(mes)
+        return
+
+    def get_input(self, mes, is_online):
+        if is_online and self.s and self.conn:
+            self.output(mes, rt=False)
+            data = self.conn.recv(1024)
+        else:
+            data = raw_input(mes)
+        return data
+        
+    def game_online(self):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.s.bind((HOST, PORT))
+        self.s.listen(1)
+        self.conn, self.addr = self.s.accept()
+        print 'Connected by', self.addr
+        print "Starting game...."
+        self.game()
+        self.conn.close()
         return
 
     def game(self):
-        print 
-        print "<<  Yonmoku3D  >>"
+        self.output("")
+        self.output("<<  Yonmoku3D  >>")
         self.show()
         while True:
-            print "[ BLACK's turn ]"
-            x,y = [int(i) for i in raw_input("X,Y >").split(",")]
+            self.output("[ BLACK's turn ]")
+            x,y = [int(i) for i in self.get_input("X,Y >", is_online=False).split(",")]
             self.put(x,y,BLACK)
             if self.is_finished():
-                print "BLACK win!!"
+                self.output("BLACK win!!")
                 return
             self.show()
 
-            print "[WHITE's turn ]"
-            x,y = [int(i) for i in raw_input("X,Y >").split(",")]
+            self.output("[WHITE's turn ]")
+            x,y = [int(i) for i in self.get_input("X,Y >", is_online=True).split(",")]
             self.put(x,y,WHITE)
             if self.is_finished():
-                print "WHITE win!!"
+                self.output("WHITE win!!")
                 return
             self.show()
-                
+
+class Player(object):
+    def __init__(self, board):
+        self.board = board
+        self.s = None
+        self.conn = None
+        self.addr = None
+
+    def connect(self):
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((HOST,PORT))
+        data = self.recv(1024)
+        print data
+        return
+
 
 if __name__ == "__main__":
     b = Board()
-    b.game()
+    b.game_online()
     
