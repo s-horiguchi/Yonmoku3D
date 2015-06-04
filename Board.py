@@ -19,7 +19,6 @@ class Board(object):
                 # index i (from the bottom) is first blank position
                 self.board[y*4+x] |= (color << 2*i) 
                 # put black or white one
-                self.show() ##
                 return
         raise ValueError("This tower is full!")
 

@@ -38,6 +38,7 @@ class BoardWeb(Board):
     def __init__(self):
         super(BoardWeb, self).__init__()
         self.nextColor = BLACK
+        self.winner = None
 
     def get_scene(self):
         """ BOARD:
@@ -77,7 +78,7 @@ class MainHandler(tornado.web.RequestHandler):
 class SocketHandler(tornado.websocket.WebSocketHandler):
     board = BoardWeb()
     waiters = set()
-    players = []
+    players = [None,None] #Black player, White player
 
     def get_compression_options(self):
         # Non-None enables compression with default options.
@@ -85,29 +86,69 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self):
         SocketHandler.waiters.add(self)
-        if len(SocketHandler.players) < 2:
-            # first two waiters become players
-            SocketHandler.players.append(self)
+        # first two waiters become players
+        if SocketHandler.players[0] == None:
+            SocketHandler.players[0] = self
+        elif SocketHandler.players[1] == None:
+            SocketHandler.players[1] = self
+        else:
+            pass
+        print "open", SocketHandler.players
+        self.update_board()
+
         
     def on_close(self):
         SocketHandler.waiters.remove(self)
         if self in SocketHandler.players:
-            SocketHandler.players.remove(self)
+            SocketHandler.players[SocketHandler.players.index(self)] = None
+            #if SocketHandler.board.winner:
+            #    SocketHandler.board = BoardWeb()
+        print "close", SocketHandler.players
 
-    def COLOR(self, opponent=False):
+    def winnerCOLOR(self, opponent=False, string=False):
+        # this can be called by non-player
+        if string:
+            b = "BLACK"
+            w = "WHITE"
+        else:
+            b = BLACK
+            w = WHITE
+        if not opponent:
+            if SocketHandler.board.winner == BLACK:
+                return b # BLACK is player1
+            elif SocketHandler.board.winner == WHITE:
+                return w # WHITE is player2
+            else:
+                raise
+        else:
+            if SocketHandler.board.winner == BLACK:
+                return w
+            elif SocketHandler.board.winner == WHITE:
+                return b
+            else:
+                raise
+
+        
+    def COLOR(self, opponent=False, string=False):
         # this will fail when self is not in players[]
+        if string:
+            b = "BLACK"
+            w = "WHITE"
+        else:
+            b = BLACK
+            w = WHITE
         if not opponent:
             if SocketHandler.players.index(self) == 0:
-                return BLACK # BLACK is player1
+                return b # BLACK is player1
             elif SocketHandler.players.index(self) == 1:
-                return WHITE # WHITE is player2
+                return w # WHITE is player2
             else:
                 raise
         else:
             if SocketHandler.players.index(self) == 0:
-                return WHITE
+                return w
             elif SocketHandler.players.index(self) == 1:
-                return BLACK
+                return b
             else:
                 raise
 
@@ -121,6 +162,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             raise
 
     def update_board(self):
+        if SocketHandler.board.winner:
+            self.gameover()
+            return
         json = {}
         json["type"] = "SUCCESS"
         if SocketHandler.board.nextColor == BLACK:
@@ -130,10 +174,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
         for waiter in SocketHandler.waiters:
             if waiter in SocketHandler.players:
-                if waiter.COLOR() == BLACK:
-                    json["you"] = "BLACK"
-                else:
-                    json["you"] = "WHITE"
+                json["you"] = waiter.COLOR(string=True)
             else:
                 json["you"] = "AUDIENCE"
 
@@ -142,20 +183,52 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             except:
                 logging.error("Error sending message", exc_info=True)
     
-    def win_gameover(self):
-        if self.COLOR() == BLACK:
-            color = "BLACK"
+    def gameover(self):
+        # this is called someone requested for update after gameover
+        # this method is called by anyone (not only winner)
+        if not SocketHandler.board.winner:
+            raise
+        json = {}
+        json["type"] = "GAMEOVER"
+        
+        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
+        if self in SocketHandler.players:
+            if self.COLOR() == self.winnerCOLOR(): # for winner
+                json["info"] = "YOU WIN!!"
+                json["you"] = self.winnerCOLOR(string=True)
+                self.write_message(json)
+            else: # for looser
+                json["info"] = "YOU LOSE..."
+                json["you"] = self.winnerCOLOR(opponent=True, string=True)
+                self.write_message(json)
         else:
-            color = "WHITE"
+            # for audience
+            json["info"] = "%s WIN!!" % self.winnerCOLOR(string=True)
+            json["you"] = "AUDIENCE"
+            self.write_message(json)
+
+        
+    def win_gameover(self):
+        # this method should be called once just after the game is over
+        # this is designed to be called by winner
+        if not SocketHandler.board.winner:
+            raise
 
         json = {}
         json["type"] = "GAMEOVER"
+        
         json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
+        # for winner
         json["info"] = "YOU WIN!!"
+        json["you"] = self.winnerCOLOR(string=True)
         self.write_message(json)
+        # for looser
         json["info"] = "YOU LOSE..."
+        json["you"] = self.winnerCOLOR(opponent=True, string=True)
         self.opponent_player().write_message(json)
-        json["info"] = "%s WIN!!" % color
+        # for audience
+        json["info"] = "%s WIN!!" % self.winnerCOLOR(string=True)
+        json["you"] = "AUDIENCE"
         for waiter in SocketHandler.waiters:
             if not waiter in SocketHandler.players:
                 try:
@@ -169,6 +242,11 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         parsed = tornado.escape.json_decode(message)
         json = {}
         if parsed["type"] == "MOVE":
+            if SocketHandler.board.winner:
+                json["type"] = "ERROR"
+                json["html"] = "Game Is Over!"
+                self.write_message(json)
+                return
             if self in SocketHandler.players and SocketHandler.board.nextColor==self.COLOR():
                 try:
                     SocketHandler.board.user_put(parsed["body"], self.COLOR())
@@ -178,6 +256,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
                     self.write_message(json)
                 else:
                     if SocketHandler.board.is_finished():
+                        SocketHandler.board.winner = self.COLOR()
                         self.win_gameover()
                     else:
                         SocketHandler.board.nextColor = self.COLOR(opponent=True)
