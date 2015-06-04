@@ -19,6 +19,7 @@ class Board(object):
                 # index i (from the bottom) is first blank position
                 self.board[y*4+x] |= (color << 2*i) 
                 # put black or white one
+                self.show() ##
                 return
         raise ValueError("This tower is full!")
 
@@ -35,23 +36,23 @@ class Board(object):
     def user_put(self, pos,color):
         # eg. pos = "A1" -> y=0,x=0
         if pos[0] == "A":
-            x = 0
+            y = 0
         elif pos[0] == "B":
-            x = 1
+            y = 1
         elif pos[0] == "C":
-            x = 2
+            y = 2
         elif pos[0] == "D":
-            x = 3
+            y = 3
         else:
             raise ValueError("Invalid board position!")
         if pos[1] == "1":
-            y = 0
+            x = 0
         elif pos[1] == "2":
-            y = 1
+            x = 1
         elif pos[1] == "3":
-            y = 2
+            x = 2
         elif pos[1] == "4":
-            y = 3
+            x = 3
         else:
             raise ValueError("Invalid board position!")
         return self.put(x,y,color)
