@@ -1,0 +1,14 @@
+<div class="board">
+<table border="1">
+  <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+  {% for xname,zs in board %}
+    {% for i,ys in enumerate(zs) %}
+      <tr>
+	{% if i == 0 %}<td rowspan="4">{{ xname }}</td>{% end %}
+	{% for p in ys %}<td>{{ p }}</td>{% end %}
+      </tr>
+    {% end %}
+      <tr>　</tr>
+  {% end %}
+</table>
+</div>

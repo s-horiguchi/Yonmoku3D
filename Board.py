@@ -35,23 +35,23 @@ class Board(object):
     def user_put(self, pos,color):
         # eg. pos = "A1" -> y=0,x=0
         if pos[0] == "A":
-            y = 0
+            x = 0
         elif pos[0] == "B":
-            y = 1
+            x = 1
         elif pos[0] == "C":
-            y = 2
+            x = 2
         elif pos[0] == "D":
-            y = 3
+            x = 3
         else:
             raise ValueError("Invalid board position!")
         if pos[1] == "1":
-            x = 0
+            y = 0
         elif pos[1] == "2":
-            x = 1
+            y = 1
         elif pos[1] == "3":
-            x = 2
+            y = 2
         elif pos[1] == "4":
-            x = 3
+            y = 3
         else:
             raise ValueError("Invalid board position!")
         return self.put(x,y,color)
@@ -280,6 +280,9 @@ class Board(object):
         self.sock.listen(1)
         self.conn, self.addr = self.sock.accept()
         print 'Connected by', self.addr
+        mode = self.get_input("mode:", is_online=True)
+        if mode == "machine":
+            self.machine_mode = True
         print "Starting game...."
         self.game()
         self.conn.close()
@@ -321,20 +324,6 @@ class Board(object):
                 self.output("WHITE win!!")
                 return
             self.show()
-
-class Player(object):
-    def __init__(self, board):
-        self.board = board
-        self.sock = None
-        self.conn = None
-        self.addr = None
-
-    def connect(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((HOST,PORT))
-        data = self.recv(1024)
-        print data
-        return
 
 
 if __name__ == "__main__":
