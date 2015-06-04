@@ -4,11 +4,11 @@
   {% for xname,zs in board %}
     {% for i,ys in enumerate(zs) %}
       <tr>
-	{% if i == 0 %}<td rowspan="4">{{ xname }}</td>{% end %}
-	{% for p in ys %}<td>{{ p }}</td>{% end %}
+	{% if i == 0 %}<td rowspan="4">{{ xname }}　</td>{% end %}
+	{% for p in ys %}<td>　{{ p }}　</td>{% end %}
       </tr>
     {% end %}
-      <tr>　</tr>
+      <tr><td>----</td></tr>
   {% end %}
 </table>
 </div>

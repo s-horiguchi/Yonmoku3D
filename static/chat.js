@@ -19,64 +19,61 @@ $(document).ready(function() {
     $(".inputbutton").click(function() {
 	newMove($(this));
     });
-    updater.poll();
+    updater.start();
 });
+
+function enableButtons() {
+    $(".inputbutton").removeAttr("disabled");
+}
+function disableButtons() {
+    $(".inputbutton").attr("disabled", "disabled");
+}
 
 function newMove(button) {
     var form = $("#moveform");
     var json = {};
     json["_xsrf"] = $("input[name=_xsrf]").val();
-    json["button"] = button.val();
-
-    $.postJSON("/a/move/new", json, function(response) {
-        updater.updateBoard(response);
-    });
+    json["type"] = "MOVE";
+    json["body"] = button.val();
+    updater.socket.send(JSON.stringify(json));
 }
-
-function getCookie(name) {
-    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
-    return r ? r[1] : undefined;
-}
-
-jQuery.postJSON = function(url, args, callback) {
-    args._xsrf = getCookie("_xsrf");
-    $.ajax({url: url, data: $.param(args), dataType: "text", type: "POST",
-            success: function(response) {
-        if (callback) callback( response );
-    }, error: function(response) {
-	$("#error").fadeIn(0).html(response.response);
-	$("#error").fadeOut(2000);
-        console.log("ERROR:", response.response);
-    }});
-};
 
 var updater = {
-    errorSleepTime: 500,
+    socket: null,
+    you: null,
 
-    poll: function() {
-        var args = {"_xsrf": getCookie("_xsrf")};
-        $.ajax({url: "/a/move/updates", type: "POST", dataType: "text",
-                data: $.param(args), success: updater.onSuccess,
-                error: updater.onError});
+    start: function() {
+	var url = "ws://" + location.host + "/socket";
+	updater.socket = new WebSocket(url);
+	updater.socket.onmessage = function(event) {
+	    var json = JSON.parse(event.data);
+	    if (json.type == "ERROR")
+		updater.showError(json.html);
+	    else if (json.type == "GAMEOVER") {
+		updater.showInfo(json.info);
+		updater.updateBoard(json.html);
+	    }
+	    else if (json.type == "SUCCESS") {
+		updater.you = json.you;
+		$("#info").html("You are "+json.you + "<br>It's " + json.turn + "'s turn!");
+		
+		if (updater.you == json.turn)
+		    enableButtons();
+		else
+		    disableButtons();
+		updater.updateBoard(json.html);
+	    }
+	}
     },
 
-    onSuccess: function(response) {
-        try {
-            updater.updateBoard( response );
-        } catch (e) {
-            updater.onError();
-            return;
-        }
-        updater.errorSleepTime = 500;
-        window.setTimeout(updater.poll, 0);
+    showError: function(message) {
+	$("#error").fadeIn(0).html(message);
+	$("#error").fadeOut(2000);
+	console.log("ERROR:", message);
     },
-
-    onError: function(response) {
-        updater.errorSleepTime *= 2;
-        console.log("Poll error; sleeping for", updater.errorSleepTime, "ms");
-        window.setTimeout(updater.poll, updater.errorSleepTime);
+    showInfo: function(message) {
+	$("#info").html(message);
     },
-
     updateBoard: function(message) {
 	$("#inbox").html(message);
     }
