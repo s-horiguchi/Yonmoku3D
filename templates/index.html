@@ -8,37 +8,38 @@
   <body>
     <div id="body">
       <div id="info"></div>
+      <button id="resetbutton">RESTART</button>
       <div id="inbox">
         {% module Template("board.html", board=board) %}
       </div>
       <div id="input">
 	<div id="error"></div>
-        <form action="/a/move/new" method="post" id="moveform">
+        <form method="post" id="moveform">
 	  {% module xsrf_form_html() %}
           <table>
 	    <tr>
-	      <td><input type="button" class="inputbutton" name="button" value="A1"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="A2"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="A3"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="A4"/></td>
+	      <td><input type="button" class="inputbutton" value="A1"/></td>
+	      <td><input type="button" class="inputbutton" value="A2"/></td>
+	      <td><input type="button" class="inputbutton" value="A3"/></td>
+	      <td><input type="button" class="inputbutton" value="A4"/></td>
 	    </tr>
 	    <tr>
-	      <td><input type="button" class="inputbutton" name="button" value="B1"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="B2"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="B3"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="B4"/></td>
+	      <td><input type="button" class="inputbutton" value="B1"/></td>
+	      <td><input type="button" class="inputbutton" value="B2"/></td>
+	      <td><input type="button" class="inputbutton" value="B3"/></td>
+	      <td><input type="button" class="inputbutton" value="B4"/></td>
 	    </tr>
 	    <tr>
-	      <td><input type="button" class="inputbutton" name="button" value="C1"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="C2"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="C3"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="C4"/></td>
+	      <td><input type="button" class="inputbutton" value="C1"/></td>
+	      <td><input type="button" class="inputbutton" value="C2"/></td>
+	      <td><input type="button" class="inputbutton" value="C3"/></td>
+	      <td><input type="button" class="inputbutton" value="C4"/></td>
 	    </tr>
 	    <tr>
-	      <td><input type="button" class="inputbutton" name="button" value="D1"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="D2"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="D3"/></td>
-	      <td><input type="button" class="inputbutton" name="button" value="D4"/></td>
+	      <td><input type="button" class="inputbutton" value="D1"/></td>
+	      <td><input type="button" class="inputbutton" value="D2"/></td>
+	      <td><input type="button" class="inputbutton" value="D3"/></td>
+	      <td><input type="button" class="inputbutton" value="D4"/></td>
 	    </tr>
           </table>
         </form>

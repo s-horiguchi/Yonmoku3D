@@ -93,7 +93,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             SocketHandler.players[1] = self
         else:
             pass
-        print "open", SocketHandler.players
+        #print "open", SocketHandler.players
         self.update_board()
 
         
@@ -103,7 +103,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             SocketHandler.players[SocketHandler.players.index(self)] = None
             #if SocketHandler.board.winner:
             #    SocketHandler.board = BoardWeb()
-        print "close", SocketHandler.players
+        #print "close", SocketHandler.players
 
     def winnerCOLOR(self, opponent=False, string=False):
         # this can be called by non-player

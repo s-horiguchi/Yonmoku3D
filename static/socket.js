@@ -3,6 +3,9 @@ $(document).ready(function() {
     $(".inputbutton").click(function() {
 	newMove($(this));
     });
+    $("#resetbutton").click(function() {
+	resetBoard();
+    });
     updater.start();
 });
 
@@ -19,6 +22,13 @@ function newMove(button) {
     json["_xsrf"] = $("input[name=_xsrf]").val();
     json["type"] = "MOVE";
     json["body"] = button.val();
+    updater.socket.send(JSON.stringify(json));
+}
+function resetBoard() {
+    var form = $("#moveform");
+    var json = {};
+    json["_xsrf"] = $("input[name=_xsrf]").val();
+    json["type"] = "RESET";
     updater.socket.send(JSON.stringify(json));
 }
 
