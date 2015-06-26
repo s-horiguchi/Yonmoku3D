@@ -34,7 +34,8 @@ def is_same_non0(l):
         return False
 
 def has0_and_same(l):
-    if l.count(0) == 1 and l.count(l[0]) == len(l)-1:
+    if l.count(0) == 1 and l.count((l0 for l0 in l if l0 != 0).next()) == len(l)-1:
+        #there is one 0 in l and all the non-0 are the same number
         return l[0], l.index(0)#COLOR and index of different one
     else:
         return False,False

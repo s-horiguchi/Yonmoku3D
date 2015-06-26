@@ -214,7 +214,7 @@ class Board(object):
                 yield (color, ((0,y,0), (1,y,1), (2,y,2), (3,y,3))[i])
             color,i = has0_and_same([self.get(x,y,z) for z,x in ((0,3), (1,2), (2,1), (3,0))])
             if color:
-                yield (color, ((0,y,3), (1,y,2), (2,y,1), (3,y,0))[i])
+                yield (color, ((3,y,0), (2,y,1), (1,y,2), (0,y,3))[i])
 
         
     def _is_lizhi_diag(self):
