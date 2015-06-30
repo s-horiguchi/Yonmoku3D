@@ -306,7 +306,6 @@ class AIPlayer(SocketHandler):
         
 
     def is_urgent(self,x,y,z):
-        print "is_urgent?", x,y,z
         if z == 0 or SocketHandler.board.get(x,y,z-1) != BLANK:
             return True
         else:
@@ -323,18 +322,24 @@ class AIPlayer(SocketHandler):
         if not self in SocketHandler.players or SocketHandler.board.nextColor != self.COLOR():
             #if it's not my turn, do nothing!
             return
-        urgents = [(pos[0],pos[1]) for color,pos in SocketHandler.board.is_lizhi() if self.is_urgent(pos[0],pos[1],pos[2])]
+        urgents = [(color,(pos[0],pos[1])) for color,pos in SocketHandler.board.is_lizhi() if self.is_urgent(pos[0],pos[1],pos[2])]
         print "urgents", urgents
+        pos = None
         if len(urgents) == 1:
-            pos = urgents[0]
+            pos = urgents[0][1]
             logging.info("AI decided one urgent move %s", str(pos))
         elif len(urgents) > 1:
-            pos = random.choice(urgents)
-            logging.info("AI randomly selected one urgent  move %s", str(pos))
+            # winning the game is higher priority than preventing the oponent's winning
+            for u in urgents:
+                if u[0] == self.COLOR():
+                    pos = u[1]
+                    logging.info("AI selected one urgent move %s", str(pos))
+            if not pos:
+                pos = random.choice(urgents)[1]
+                logging.info("AI randomly selected one urgent  move %s", str(pos))
         else:
             pos = self.random_valid_pos()
             logging.info("AI randomly decided new move %s", str(pos))
-
 
 
         SocketHandler.board.put(pos[0],pos[1], self.COLOR())
