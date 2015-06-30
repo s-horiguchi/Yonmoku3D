@@ -19,7 +19,7 @@ function disableButtons() {
 function newMove(button) {
     var form = $("#moveform");
     var json = {};
-    json["_xsrf"] = $("input[name=_xsrf]").val();
+    //json["_xsrf"] = $("input[name=_xsrf]").val();
     json["type"] = "MOVE";
     json["body"] = button.val();
     updater.socket.send(JSON.stringify(json));
@@ -27,7 +27,7 @@ function newMove(button) {
 function resetBoard() {
     var form = $("#moveform");
     var json = {};
-    json["_xsrf"] = $("input[name=_xsrf]").val();
+    //json["_xsrf"] = $("input[name=_xsrf]").val();
     json["type"] = "RESET";
     updater.socket.send(JSON.stringify(json));
 }
@@ -45,7 +45,8 @@ var updater = {
 		updater.showError(json.html);
 	    else if (json.type == "GAMEOVER") {
 		updater.showInfo("You are "+json.you + "<br>"+json.info);
-		updater.updateBoard(json.html);
+		updater.updateBoardHTML(json.html);
+		updater.updateBoardGraphics(json.scene);
 	    }
 	    else if (json.type == "SUCCESS") {
 		updater.you = json.you;
@@ -55,7 +56,8 @@ var updater = {
 		    enableButtons();
 		else
 		    disableButtons();
-		updater.updateBoard(json.html);
+		updater.updateBoardHTML(json.html);
+		updater.updateBoardGraphics(json.scene);
 	    }
 	}
     },
@@ -68,7 +70,28 @@ var updater = {
     showInfo: function(message) {
 	$("#info").html(message);
     },
-    updateBoard: function(message) {
+    updateBoardHTML: function(message) {
 	$("#inbox").html(message);
+    },
+    updateBoardGraphics: function(scene) {
+	for(var x=0; x< 4; x++) {
+	    for(var y=0; y < 4; y++) {
+		for(var z = 0; z < 4; z++) {
+		    switch(scene[x][y][z]){
+		    case "|":
+			spheres[16*x+4*y+z].visible = false;
+			break;
+		    case "W":
+			spheres[16*x+4*y+z].visible = true;
+			spheres[16*x+4*y+z].material.color.setHex(0xffffff);
+			break;
+		    case "B":
+			spheres[16*x+4*y+z].visible = true;
+			spheres[16*x+4*y+z].material.color.setHex(0x000000);
+			break;
+		    }
+		}
+	    }
+	}
     }
 };

@@ -11,9 +11,11 @@ import tornado.web
 import tornado.websocket
 import os.path
 import uuid
+import random
 
-#from tornado.concurrent import Future
-#from tornado import gen
+from tornado.util import ObjectDict
+from tornado.httputil import HTTPServerRequest
+
 from tornado.options import define, options, parse_command_line
 
 define("port", default=8888, help="run on the given port", type=int)
@@ -40,7 +42,7 @@ class BoardWeb(Board):
         self.nextColor = BLACK
         self.winner = None
 
-    def get_scene(self):
+    def get_scene_dict(self):
         """ BOARD:
               1    2    3    4
               %c    %c    %c    %c
@@ -68,12 +70,18 @@ class BoardWeb(Board):
                 ("C",[[["|","","B","W"][self.get(x,2,z)] for x in xrange(4)] for z in (3,2,1,0)]),
                 ("D",[[["|","","B","W"][self.get(x,3,z)] for x in xrange(4)] for z in (3,2,1,0)]),
                 ]
-        
+    def get_scene_list(self):
+        return [
+            [
+                [["|","","B","W"][self.get(x,y,z)] for z in xrange(4)
+             ] for y in xrange(4)
+            ] for x in xrange(4)]
+
         
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render("index.html", board=SocketHandler.board.get_scene())
+        self.render("index.html", board=SocketHandler.board.get_scene_dict())
 
 class SocketHandler(tornado.websocket.WebSocketHandler):
     board = BoardWeb()
@@ -162,6 +170,8 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             raise
 
     def update_board(self):
+        ai = None
+
         if SocketHandler.board.winner:
             self.gameover()
             return
@@ -171,8 +181,13 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             json["turn"] = "BLACK"
         else:
             json["turn"] = "WHITE"
-        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
+        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene_dict()))
+        json["scene"] = SocketHandler.board.get_scene_list()
+
         for waiter in SocketHandler.waiters:
+            if isinstance(waiter, AIPlayer):
+                ai = waiter
+                continue
             if waiter in SocketHandler.players:
                 json["you"] = waiter.COLOR(string=True)
             else:
@@ -182,6 +197,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
                 waiter.write_message(json)
             except:
                 logging.error("Error sending message", exc_info=True)
+
+        if ai:
+            ai.moveAI()
     
     def gameover(self):
         # this is called someone requested for update after gameover
@@ -191,7 +209,8 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         json = {}
         json["type"] = "GAMEOVER"
         
-        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
+        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene_dict()))
+        json["scene"] = SocketHandler.board.get_scene_list()
         if self in SocketHandler.players:
             if self.COLOR() == self.winnerCOLOR(): # for winner
                 json["info"] = "YOU WIN!!"
@@ -217,7 +236,8 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         json = {}
         json["type"] = "GAMEOVER"
         
-        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene()))
+        json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene_dict()))
+        json["scene"] = SocketHandler.board.get_scene_list()
         # for winner
         json["info"] = "YOU WIN!!"
         json["you"] = self.winnerCOLOR(string=True)
@@ -269,12 +289,90 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             if self in SocketHandler.players:
                 SocketHandler.board = BoardWeb()
                 self.update_board()
+
+class AIPlayer(SocketHandler):
+    def __init__(self, application, request=None, **kwargs):
+        #super(AIPlayer,self).__init__(application, request, **kwargs)
+        # to avoid error in self.render_string
+        self.application = application
+        self.request = HTTPServerRequest(method="POST",
+                                         uri="/socket",
+                                         headers={"Accept-Language":"ja,en-US;q=0.8,en;q=0.6"})
+        self.ui = ObjectDict((n, self._ui_method(m)) for n, m in
+                             application.ui_methods.items())
+
+        #add myself to the waiters
+        self.open()
+        
+
+    def is_urgent(self,x,y,z):
+        print "is_urgent?", x,y,z
+        if z == 0 or SocketHandler.board.get(x,y,z-1) != BLANK:
+            return True
+        else:
+            return False
+
+    def random_valid_pos(self):
+        while True:
+            x = random.randint(0,3)
+            y = random.randint(0,3)
+            if SocketHandler.board.get(x,y,3) == BLANK:
+                return x,y
+
+    def moveAI(self):
+        if not self in SocketHandler.players or SocketHandler.board.nextColor != self.COLOR():
+            #if it's not my turn, do nothing!
+            return
+        urgents = [(pos[0],pos[1]) for color,pos in SocketHandler.board.is_lizhi() if self.is_urgent(pos[0],pos[1],pos[2])]
+        print "urgents", urgents
+        if len(urgents) == 1:
+            pos = urgents[0]
+            logging.info("AI decided one urgent move %s", str(pos))
+        elif len(urgents) > 1:
+            pos = random.choice(urgents)
+            logging.info("AI randomly selected one urgent  move %s", str(pos))
+        else:
+            pos = self.random_valid_pos()
+            logging.info("AI randomly decided new move %s", str(pos))
+
+
+
+        SocketHandler.board.put(pos[0],pos[1], self.COLOR())
+        #SocketHandler.board.show()
+        if SocketHandler.board.is_finished():
+            SocketHandler.board.winner = self.COLOR()
+            self.win_gameover()
+        else:
+            SocketHandler.board.nextColor = self.COLOR(opponent=True)
+            self.update_board()
+
+    def write_message(self, message, binary=False):
+        #called by other players' SocketHandler instances
+        #to notice updates (originally notice for connected browsers)
+        if isinstance(message,dict):
+            if message["type"] == "ERROR":
+                #if something goes wrong, just run away
+                self.on_close()
+                return
+
+            elif message["type"] == "GAMEOVER":
+                if message["info"] == "YOU WIN!!":
+                    pass
+                elif message["info"] == "YOU LOSE...":
+                    pass
+
+            elif message["type"] == "SUCCESS":
+                # won't called
+                raise
+        
                 
             
 def main():
     parse_command_line()
     app = Application()
     app.listen(options.port)
+    ai = AIPlayer(app,None)
+
     tornado.ioloop.IOLoop.current().start()
 
 
