@@ -1,7 +1,7 @@
 
 $(document).ready(function() {
     $(".inputbutton").click(function() {
-	newMove($(this));
+	newMove_button($(this));
     });
     $("#resetbutton").click(function() {
 	resetBoard();
@@ -15,11 +15,17 @@ function enableButtons() {
 function disableButtons() {
     $(".inputbutton").attr("disabled", "disabled");
 }
-
-function newMove(button) {
+function newMove(name) {
+    var json = {};
+    json["type"] = "MOVE";
+    json["body"] = String.fromCharCode(0x41 + parseInt(name[10]), //y
+				       name[8].charCodeAt(0)+1); //x
+    updater.socket.send(JSON.stringify(json));
+}
+    
+function newMove_button(button) {
     var form = $("#moveform");
     var json = {};
-    //json["_xsrf"] = $("input[name=_xsrf]").val();
     json["type"] = "MOVE";
     json["body"] = button.val();
     updater.socket.send(JSON.stringify(json));
@@ -27,7 +33,6 @@ function newMove(button) {
 function resetBoard() {
     var form = $("#moveform");
     var json = {};
-    //json["_xsrf"] = $("input[name=_xsrf]").val();
     json["type"] = "RESET";
     updater.socket.send(JSON.stringify(json));
 }
