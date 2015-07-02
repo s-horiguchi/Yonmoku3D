@@ -20,6 +20,7 @@ from tornado.options import define, options, parse_command_line
 
 define("port", default=8888, help="run on the given port", type=int)
 define("debug", default=False, help="run in debug mode")
+define("history", default="records.dump", help="save records of game to the given file")
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -38,7 +39,7 @@ class Application(tornado.web.Application):
 
 class BoardWeb(Board):
     def __init__(self):
-        super(BoardWeb, self).__init__()
+        super(BoardWeb, self).__init__(options.history)
         self.nextColor = BLACK
         self.winner = None
 

@@ -3,11 +3,14 @@
 
 from array import array
 import socket
+import os.path
 from base import *
-    
+
 class Board(object):
-    def __init__(self):
+    def __init__(self, history_file=None):
         self.board = array("B", (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
+        self.history = array("B")
+        self.history_file = history_file
         self.sock = None
         self.conn = None
         self.addr = None
@@ -17,8 +20,14 @@ class Board(object):
         for i in xrange(4):
             if not (self.board[y*4+x] & (0b10 << 2*i)):
                 # index i (from the bottom) is first blank position
-                self.board[y*4+x] |= (color << 2*i) 
                 # put black or white one
+                self.board[y*4+x] |= (color << 2*i)
+                # suppose BLACK and WHITE put alternately (BLACK must be first!)
+                # each char(1byte) in self.history is filled with every two moves
+                if color == WHITE:# (took the second move)
+                    self.history[-1] += ((x<<2)+y)
+                else: #color == BLACK(took the first move)
+                    self.history.append( ((x<<2)+y) << 4)
                 return
         raise ValueError("This tower is full!")
 
@@ -80,7 +89,21 @@ class Board(object):
             raise ValueError("Invalid board position!")
         return self.get(x,y)
             
-
+    def dump_history(self):
+        if not self.history_file: return
+        if os.path.getsize(self.history_file) > 1000000000:
+            # if history file is over 1GB, drop the current data
+            return
+        else:
+            # three bytes of zero in a row means the end of the game
+            self.history.append(0)
+            self.history.append(0)
+            self.history.append(0)
+            f = open(self.history_file, "ab")
+            self.history.tofile(f)
+            f.close()
+            return
+        
     def is_finished(self):
         # call this method every time the board is changed in order not to miss the finish
         r = [self._is_finished_x(),
@@ -91,8 +114,10 @@ class Board(object):
              self._is_finished_zx(),
             self._is_finished_diag()]
         if BLACK in r:
+            self.dump_history()
             return BLACK
         elif WHITE in r:
+            self.dump_history()
             return WHITE
         else:
             return False
