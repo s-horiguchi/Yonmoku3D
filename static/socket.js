@@ -50,9 +50,11 @@ var updater = {
 	    if (json.type == "ERROR")
 		updater.showError(json.html);
 	    else if (json.type == "GAMEOVER") {
-		updater.showInfo("You are <b>"+json.you + "</b><br>"+json.info);
+		updater.showInfo("You are <b>"+json.you + "</b><br><span id='result'>"+json.info+"</span>");
 		updater.updateBoardHTML(json.html);
 		updater.updateBoardGraphics(json.scene);
+		var paragraph = document.getElementById('result');
+		textEffect(paragraph, 'fly-in-out');
 	    }
 	    else if (json.type == "SUCCESS") {
 		updater.you = json.you;
@@ -106,4 +108,35 @@ var updater = {
 	    }
 	}
     }
+};
+
+function textEffect(paragraph, animationName) {
+    var text = paragraph.innerHTML,
+    chars = text.length,
+    newText = '',
+    animation = animationName,
+    char,
+    i;
+    
+    for (i = 0; i < chars; i += 1) {
+	newText += '<i>' + text.charAt(i) + '</i>';
+    }
+    
+    paragraph.innerHTML = newText;
+    
+    var wrappedChars = document.getElementsByTagName('i'),
+    wrappedCharsLen = wrappedChars.length,
+    j = 0;
+    
+    function addEffect () {
+	setTimeout(function () {
+	    wrappedChars[j].className = animation;
+	    j += 1;
+	    if (j < wrappedCharsLen) {
+		addEffect();
+	    }
+	}, 100)
+    }
+    
+    addEffect();
 };
