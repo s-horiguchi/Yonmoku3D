@@ -46,16 +46,20 @@ var updater = {
 	updater.socket = new WebSocket(url);
 	updater.socket.onmessage = function(event) {
 	    var json = JSON.parse(event.data);
+	    updater.updateConnection(json.connection);
 	    if (json.type == "ERROR")
 		updater.showError(json.html);
 	    else if (json.type == "GAMEOVER") {
-		updater.showInfo("You are "+json.you + "<br>"+json.info);
+		updater.showInfo("You are <b>"+json.you + "</b><br>"+json.info);
 		updater.updateBoardHTML(json.html);
 		updater.updateBoardGraphics(json.scene);
 	    }
 	    else if (json.type == "SUCCESS") {
 		updater.you = json.you;
-		updater.showInfo("You are "+json.you + "<br>It's " + json.turn + "'s turn!");
+		if(json.you === json.turn)
+		    updater.showInfo("You are <b>"+json.you + "</b><br>It's YOUR turn!");
+		else
+		    updater.showInfo("You are <b>"+json.you + "</b><br>It's " + json.turn + "'s turn!");
 		
 		if (updater.you == json.turn)
 		    enableButtons();
@@ -67,6 +71,9 @@ var updater = {
 	}
     },
 
+    updateConnection: function(message) {
+	$("#connection").html(message);
+    },
     showError: function(message) {
 	$("#error").fadeIn(0).html(message);
 	$("#error").fadeOut(1500);

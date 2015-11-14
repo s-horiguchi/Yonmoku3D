@@ -8,6 +8,9 @@ function init() {
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 );
     scene.add(camera);
     controls = new THREE.TrackballControls( camera );
+    controls.minDistance = 1;
+    controls.maxDistance = 10;
+    
     renderer = new THREE.WebGLRenderer({antialias:true, alpha: true });
     //renderer = new THREE.CSS3DRenderer();
     renderer.setClearColor( 0xffffff, 1);
@@ -15,7 +18,7 @@ function init() {
     container = document.getElementById( 'ThreeJS' );
     container.appendChild( renderer.domElement );
 
-    camera.position.set(0,5,5);
+    camera.position.set(0,7,4);
     camera.lookAt(scene.position);
     
     
@@ -29,7 +32,7 @@ function init() {
 		var sphereGeometry = new THREE.SphereGeometry( 0.4, 32, 16 ); 
 		var sphereMaterial = new THREE.MeshLambertMaterial( {color: 0x8888ff} ); 
 		var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-		sphere.position.set(x-2,z*0.8,y-2);
+		sphere.position.set(x-1.5,z*0.8+0.5,y-1.5);
 		sphere.name = "sphere"+x+","+y+","+z;
 		sphere.visible = false;
 		scene.add(sphere);
@@ -48,7 +51,7 @@ function init() {
 	    texture.minFilter = THREE.NearestFilter;
 	    var material = new THREE.MeshBasicMaterial( { map:texture, color:0xaa0000, wireframe:false});
 	    var cylinder = new THREE.Mesh(geomet, material);
-	    cylinder.position.set(x-2, 1.25, y-2);
+	    cylinder.position.set(x-1.5, 1.75, y-1.5);
 	    cylinder.name = "cylinder"+x+","+y;
 	    scene.add( cylinder );
 	    cylinders.push(cylinder);
@@ -64,12 +67,11 @@ function init() {
     var floorMaterial = new THREE.MeshBasicMaterial( { color: 0x2A7E43, side: THREE.DoubleSide } );
     var floorGeometry = new THREE.PlaneBufferGeometry(10, 10, 1, 1);
     var floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.position.y = -0.5;
+    //floor.position.y = -0.5;
     floor.rotation.x = Math.PI / 2;
     floor.name = "floor";
     scene.add(floor);
     
-
     var skyBoxGeometry = new THREE.BoxGeometry( 10000, 10000, 10000 );
     var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
     var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );

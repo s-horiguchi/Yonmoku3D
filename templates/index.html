@@ -7,14 +7,17 @@
   </head>
   <body>
     <div id="ThreeJS" style="z-index: 0; position: absolute; left:0px; top:0px"></div>
-    <div id="body">
+    <div id="status">
+      <div id="connection"></div>
       <div id="info"></div>
+    </div>
+    <div id="body">
+      <div id="error"></div>
       <button id="resetbutton">RESTART</button>
       <div id="inbox">
         {% module Template("board.html", board=board) %}
       </div>
       <div id="input">
-	<div id="error"></div>
         <form method="post" id="moveform">
           <table>
 	    <tr>

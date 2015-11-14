@@ -190,7 +190,10 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
                 continue
             if waiter in SocketHandler.players:
                 json["you"] = waiter.COLOR(string=True)
+                json["connection"] = "<font color='red'>A.I.</font> vs. <b>YOU</b><br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
+
             else:
+                json["connection"] = "<font color='red'>A.I.</font> vs. PLAYER<br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
                 json["you"] = "AUDIENCE"
 
             try:
@@ -212,9 +215,11 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene_dict()))
         json["scene"] = SocketHandler.board.get_scene_list()
         if self in SocketHandler.players:
+            json["connection"] = "<font color='red'>A.I.</font> vs. <b>YOU</b><br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
             if self.COLOR() == self.winnerCOLOR(): # for winner
                 json["info"] = "YOU WIN!!"
                 json["you"] = self.winnerCOLOR(string=True)
+                
                 self.write_message(json)
             else: # for looser
                 json["info"] = "YOU LOSE..."
@@ -224,6 +229,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
             # for audience
             json["info"] = "%s WIN!!" % self.winnerCOLOR(string=True)
             json["you"] = "AUDIENCE"
+            json["connection"] = "<font color='red'>A.I.</font> vs. PLAYER<br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
             self.write_message(json)
 
         
@@ -238,6 +244,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         
         json["html"] = tornado.escape.to_basestring(self.render_string("board.html", board=SocketHandler.board.get_scene_dict()))
         json["scene"] = SocketHandler.board.get_scene_list()
+        json["connection"] = "<font color='red'>A.I.</font> vs. <b>YOU</b><br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
         # for winner
         json["info"] = "YOU WIN!!"
         json["you"] = self.winnerCOLOR(string=True)
@@ -249,6 +256,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         # for audience
         json["info"] = "%s WIN!!" % self.winnerCOLOR(string=True)
         json["you"] = "AUDIENCE"
+        json["connection"] = "<font color='red'>A.I.</font> vs. PLAYER<br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
         for waiter in SocketHandler.waiters:
             if not waiter in SocketHandler.players:
                 try:
@@ -261,6 +269,12 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         logging.info("got message %r", message)
         parsed = tornado.escape.json_decode(message)
         json = {}
+
+        if self in SocketHandler.players:
+            json["connection"] = "<font color='red'>A.I.</font> vs. <b>YOU</b><br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
+        else:
+            json["connection"] = "<font color='red'>A.I.</font> vs. PLAYER<br>AUDIENCE:%d" % (len(SocketHandler.waiters)-2)
+
         if parsed["type"] == "MOVE":
             if SocketHandler.board.winner:
                 json["type"] = "ERROR"
