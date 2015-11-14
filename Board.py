@@ -15,21 +15,47 @@ class Board(object):
         self.conn = None
         self.addr = None
 
-    def put(self, x,y,color):
-        # color = BLACK(0b10) or WHITE(0b11)
+    def get_height(self, x,y):
+        # return the bottom blank in (x,y)
         for i in xrange(4):
             if not (self.board[y*4+x] & (0b10 << 2*i)):
                 # index i (from the bottom) is first blank position
-                # put black or white one
-                self.board[y*4+x] |= (color << 2*i)
-                # suppose BLACK and WHITE put alternately (BLACK must be first!)
-                # each char(1byte) in self.history is filled with every two moves
-                if color == WHITE:# (took the second move)
-                    self.history[-1] += ((x<<2)+y)
-                else: #color == BLACK(took the first move)
-                    self.history.append( ((x<<2)+y) << 4)
-                return
+                return i
         raise ValueError("This tower is full!")
+
+    def remove_last_put(self, color):
+        if color == WHITE:
+            x = (self.history[-1] & 0b00001100) >> 2
+            y = (self.history[-1] & 0b00000011)
+            self.history[-1] &= 0b11110000
+        else:
+            x = (self.history[-1] & 0b11000000) >> 6
+            y = (self.history[-1] & 0b00110000) >> 4
+            self.history.pop(-1)
+        try:
+            i = self.get_height(x,y) - 1
+        except ValueError:
+            i = 3
+        assert i >= 0
+        self.board[y*4+x] &= ~(color << 2*i) #bit clear
+        return
+
+    def put(self, x,y,color):
+        # color = BLACK(0b10) or WHITE(0b11)        
+        try:
+            i = self.get_height(x,y)
+        except ValueError:
+            raise ValueError("This tower is full!")
+        # put black or white one
+        self.board[y*4+x] |= (color << 2*i)
+        # suppose BLACK and WHITE put alternately (BLACK must be first!)
+        # each char(1byte) in self.history is filled with every two moves
+        if color == WHITE:# (took the second move)
+            self.history[-1] += ((x<<2)+y)
+        else: #color == BLACK(took the first move)
+            self.history.append( ((x<<2)+y) << 4)
+            return
+
 
     
     def get(self, x,y,z):
@@ -255,6 +281,79 @@ class Board(object):
         color,i = has0_and_same([self.get(x,y,z) for x,y,z in ((3,0,0), (2,1,1), (1,2,2), (0,3,3))])
         if color:
             yield (color, ((3,0,0), (2,1,1), (1,2,2), (0,3,3))[i])
+    def get_number_of_lizhis(self, ):
+        return sum((sum(1 for _ in self._is_lizhi_x()),
+                    sum(1 for _ in self._is_lizhi_y()),
+                    sum(1 for _ in self._is_lizhi_z()),
+                    sum(1 for _ in self._is_lizhi_xy()),
+                    sum(1 for _ in self._is_lizhi_yz()),
+                    sum(1 for _ in self._is_lizhi_zx()),
+                    sum(1 for _ in self._is_lizhi_diag())))
+        
+    def get_lizhis(self, x,y,z, color):
+        # return number of lizhis if mycolor is put on (x,y,z)
+        numBefore = self.get_number_of_lizhis()
+        self.put(x,y,color)
+        numAfter = self.get_number_of_lizhis()
+        self.remove_last_put(color)
+        return numAfter - numBefore
+
+    def get_clearlines(self, x,y,z, opponent_color):
+        count = 3
+        #x
+        if opponent_color in [self.get(x_,y,z) for x_ in xrange(4)]:
+            count -= 1
+        #y
+        if opponent_color in [self.get(x,y_,z) for y_ in xrange(4)]:
+            count -= 1
+        #z
+        if opponent_color in [self.get(x,y,z_) for z_ in xrange(4)]:
+            count -= 1
+        #xy
+        if (x,y) in ((0,0),(1,1),(2,2),(3,3)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z) for x_,y_ in ((0,0),(1,1),(2,2),(3,3))]:
+                count -= 1
+        elif (x,y) in ((0,3), (1,2), (2,1), (3,0)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z) for x_,y_ in ((0,3), (1,2), (2,1), (3,0))]:
+                count -= 1
+        #yz
+        if (y,z) in ((0,0),(1,1),(2,2),(3,3)):
+            count += 1
+            if opponent_color in [self.get(x,y_,z_) for y_,z_ in ((0,0),(1,1),(2,2),(3,3))]:
+                count -= 1
+        elif (y,z) in ((0,3), (1,2), (2,1), (3,0)):
+            count += 1
+            if opponent_color in [self.get(x,y_,z_) for y_,z_ in ((0,3), (1,2), (2,1), (3,0))]:
+                count -= 1
+        #zx
+        if (z,x) in ((0,0),(1,1),(2,2),(3,3)):
+            count += 1
+            if opponent_color in [self.get(x_,y,z_) for z_,x_ in ((0,0),(1,1),(2,2),(3,3))]:
+                count -= 1
+        elif (z,x) in ((0,3), (1,2), (2,1), (3,0)):
+            count += 1
+            if opponent_color in [self.get(x_,y,z_) for z_,x_ in ((0,3), (1,2), (2,1), (3,0))]:
+                count -= 1
+        #diag
+        if (x,y,z) in ((0,0,0), (1,1,1), (2,2,2), (3,3,3)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z_) for x_,y_,z_ in ((0,0,0), (1,1,1), (2,2,2), (3,3,3))]:
+                count -= 1
+        elif (x,y,z) in ((0,0,3), (1,1,2), (2,2,1), (3,3,0)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z_) for x_,y_,z_ in ((0,0,3), (1,1,2), (2,2,1), (3,3,0))]:
+                count -= 1
+        elif (x,y,z) in ((0,3,0), (1,2,1), (2,1,2), (3,0,3)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z_) for x_,y_,z_ in ((0,3,0), (1,2,1), (2,1,2), (3,0,3))]:
+                count -= 1
+        elif (x,y,z) in ((3,0,0), (2,1,1), (1,2,2), (0,3,3)):
+            count += 1
+            if opponent_color in [self.get(x_,y_,z_) for x_,y_,z_ in ((3,0,0), (2,1,1), (1,2,2), (0,3,3))]:
+                count -= 1
+        return count
 
     def show(self):
         self.output(""" BOARD:

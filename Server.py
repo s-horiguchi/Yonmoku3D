@@ -10,7 +10,6 @@ import tornado.ioloop
 import tornado.web
 import tornado.websocket
 import os.path
-import uuid
 import random
 
 from tornado.util import ObjectDict
@@ -200,7 +199,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
                 logging.error("Error sending message", exc_info=True)
 
         if ai:
-            ai.moveAI()
+            ai.moveAI2()
     
     def gameover(self):
         # this is called someone requested for update after gameover
@@ -319,7 +318,7 @@ class AIPlayer(SocketHandler):
             if SocketHandler.board.get(x,y,3) == BLANK:
                 return x,y
 
-    def moveAI(self):
+    def moveAI1(self):
         if not self in SocketHandler.players or SocketHandler.board.nextColor != self.COLOR():
             #if it's not my turn, do nothing!
             return
@@ -344,6 +343,73 @@ class AIPlayer(SocketHandler):
 
 
         SocketHandler.board.put(pos[0],pos[1], self.COLOR())
+        #SocketHandler.board.show()
+        if SocketHandler.board.is_finished():
+            SocketHandler.board.winner = self.COLOR()
+            self.win_gameover()
+        else:
+            SocketHandler.board.nextColor = self.COLOR(opponent=True)
+            self.update_board()
+
+    def moveAI2(self):
+        if not self in SocketHandler.players or SocketHandler.board.nextColor != self.COLOR():
+            #if it's not my turn, do nothing!
+            return
+        urgents = [(color,(pos[0],pos[1])) for color,pos in SocketHandler.board.is_lizhi() if self.is_urgent(pos[0],pos[1],pos[2])]
+        print "urgents", urgents
+        pos = None
+        if len(urgents) == 1:
+            pos = urgents[0][1]
+            logging.info("AI decided one urgent move %s", str(pos))
+        elif len(urgents) > 1:
+            # winning the game is higher priority than preventing the oponent's winning
+            for u in urgents:
+                if u[0] == self.COLOR():
+                    pos = u[1]
+                    logging.info("AI selected one urgent move %s", str(pos))
+            if not pos:
+                pos = random.choice(urgents)[1]
+                logging.info("AI randomly selected one urgent  move %s", str(pos))
+        else:
+            # no urgents
+            nearlizhis = []
+            for x in xrange(4):
+                for y in xrange(4):
+                    try:
+                        z = SocketHandler.board.get_height(x,y)
+                    except ValueError:
+                        continue
+                    else:
+                        nearlizhis.append(((x,y),SocketHandler.board.get_lizhis(x,y,z,self.COLOR())))
+            print "nearlizhi:",nearlizhis
+            maxlizhi = max(nearlizhis,key=lambda c: c[1])[1]
+            if maxlizhi > 0:
+                # there are some positions where you will be lizhi if you put
+                max_lizhi_cands = filter(lambda c: c[1] == maxlizhi, nearlizhis)
+                logging.info("There are %d max lizhis" % len(max_lizhi_cands))
+                print "max:",max_lizhi_cands
+                pos = random.choice(max_lizhi_cands)[0]
+                logging.info("AI randomly selected best move %s!" % str(pos))
+            else:
+                # no near lizhi positions
+                cands = []
+                for x in xrange(4):
+                    for y in xrange(4):
+                        try:
+                            z = SocketHandler.board.get_height(x,y)
+                        except ValueError:
+                            continue
+                        else:
+                            cands.append(((x,y),SocketHandler.board.get_clearlines(x,y,z, self.COLOR(opponent=True))))
+                print "cands:",cands
+                best_cands = filter(lambda c: c[1] == max(cands,key=lambda c: c[1])[1], cands)
+                logging.info("There are %d best candidates" % len(best_cands))
+                print "best:",best_cands
+                pos = random.choice(best_cands)[0]
+                logging.info("AI randomly selected best move %s!" % str(pos))
+            
+
+        SocketHandler.board.put(pos[0], pos[1], self.COLOR())
         #SocketHandler.board.show()
         if SocketHandler.board.is_finished():
             SocketHandler.board.winner = self.COLOR()
