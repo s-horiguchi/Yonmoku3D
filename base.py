@@ -41,3 +41,4 @@ def has0_and_same(l):
             return non0, l.index(0)#COLOR and index of different one
     
     return False,False
+

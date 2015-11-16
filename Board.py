@@ -14,6 +14,9 @@ class Board(object):
         self.sock = None
         self.conn = None
         self.addr = None
+        self.nextColor = BLACK
+        self.winner = None
+
 
     def get_height(self, x,y):
         # return the bottom blank in (x,y)
@@ -354,6 +357,42 @@ class Board(object):
             if opponent_color in [self.get(x_,y_,z_) for x_,y_,z_ in ((3,0,0), (2,1,1), (1,2,2), (0,3,3))]:
                 count -= 1
         return count
+
+    def get_scene_dict(self):
+        """ BOARD:
+              1    2    3    4
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+          A:  %c    %c    %c    %c
+
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+          B:  %c    %c    %c    %c
+
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+          C:  %c    %c    %c    %c
+
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+              %c    %c    %c    %c
+          D:  %c    %c    %c    %c
+        """
+        return [("A",[[["|","","B","W"][self.get(x,0,z)] for x in xrange(4)] for z in (3,2,1,0)]),
+                ("B",[[["|","","B","W"][self.get(x,1,z)] for x in xrange(4)] for z in (3,2,1,0)]),
+                ("C",[[["|","","B","W"][self.get(x,2,z)] for x in xrange(4)] for z in (3,2,1,0)]),
+                ("D",[[["|","","B","W"][self.get(x,3,z)] for x in xrange(4)] for z in (3,2,1,0)]),
+                ]
+    def get_scene_list(self):
+        return [
+            [
+                [["|","","B","W"][self.get(x,y,z)] for z in xrange(4)
+             ] for y in xrange(4)
+            ] for x in xrange(4)]
+
 
     def show(self):
         self.output(""" BOARD:
